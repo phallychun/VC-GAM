@@ -18,7 +18,7 @@ PLAYER = 2
 COIN = 3
 ANAMY = 4
 GOLD = 6
-condition = True
+gameNotOver = True
 
 #   VARIABLE AND GRID TYPE ARRAY 2D
 
@@ -46,6 +46,7 @@ grid = [
 x = 10 
 y = 10
 sum = 0
+choiceToMoveAnamy = []
  
 # FUNCTION FOR GRID CREATE GRAPHIC GAME
 
@@ -60,8 +61,6 @@ def gridToDraw() :
             x1 = 50*columnIndex
             y1 = 50*rowIndex 
             x2 = x1 + 50    
-            
-
             y2 = y1 + 50
             if arrayPos == WALL:
                 canvas.create_rectangle(x1, y1+100, x2, y2+100, fill="#4d1a00",outline="orange")
@@ -74,22 +73,25 @@ def gridToDraw() :
             elif arrayPos == GOLD :
                 golds = canvas.create_image(x1+25,y1+125,image=gold) 
             
+
+
 # SHOW SCORE 
 
 def showScore():
-    global condition
-
+    global gameNotOver
     myScore = "SCORE:"+str(sum)
-    if not condition :
-        canvas.create_rectangle(200,300,850,800,fill="gray",outline="green")
+    if not gameNotOver :
+        canvas.create_rectangle(200,300,850,800,fill="gray")
         canvas.create_text(525,500,fill="yellow",font="Times 20 italic bold",text="GAME OVER")
         canvas.create_text(525,550,fill="yellow",font="Times 20 italic bold",text="FINAL "+myScore) 
     else:
         canvas.create_text(200,50,fill="yellow",font="Times 20 italic bold",text=myScore)
-        if sum == 636 :
-            canvas.create_rectangle(200,300,850,800,fill="gray",outline="green")
-            canvas.create_text(525,500,fill="yellow",font="Times 20 italic bold",text="YOU WIN")
-            canvas.create_text(525,550,fill="yellow",font="Times 20 italic bold",text="FINAL "+myScore)
+       
+        if sum >= 700 and sum <= 780:
+            canvas.create_image(510,550,image=win) 
+            canvas.create_text(525,500,fill="white",font="Times 20 italic bold",text="YOU WIN")
+            canvas.create_text(525,550,fill="white",font="Times 20 italic bold",text="FINAL "+myScore)
+            gameNotOver = False
 
 # FIND THE PLAYER IN GRID FOR CAN MOVE OR NOT
 
@@ -103,7 +105,7 @@ def findPlayer(grid) :
 # PLAYER FOR MOVE RIGHT LEFT UP DOWN
 
 def move(direction):
-    global sum, condition
+    global sum, gameNotOver
 
     player = findPlayer(grid)
     playerRow = player[0]
@@ -111,7 +113,7 @@ def move(direction):
 
     # COMPUTE THE NEXT POSSITION 
 
-    if condition :
+    if gameNotOver :
         if direction == 'right':
             nextRow = playerRow
             nextColumn = playerColumn + 1
@@ -127,25 +129,19 @@ def move(direction):
         elif direction == 'down':
             nextRow = playerRow +1
             nextColumn = playerColumn 
-        
+    
         if  grid[nextRow][nextColumn] != WALL :
-
             # MANAGE THE COINS
-
             if grid[nextRow][nextColumn] == COIN:
-                # winsound.PlaySound("test.wav",winsound.SND_sound/coin2.wav)
-                sum += COIN
+                sum += 5
             elif grid[nextRow][nextColumn] == GOLD:
-                sum += GOLD
+                sum += 10
 
             # MANAGE THE ANAMY 
-
             if grid[nextRow][nextColumn] == ANAMY:
-                condition = False
+                gameNotOver = False
             else:
-                
             # MANGE PLAYER
-
                 grid[playerRow][playerColumn] = EMPTY
                 grid[nextRow][nextColumn] = PLAYER
 
@@ -154,7 +150,89 @@ def move(direction):
     gridToDraw()
     showScore()
 
-# MOVE ANAMY IN THE GRID
+#  FUNCTION FOR MOVE THE ENEMMIES
+
+def getAllEnnemiesPositions(grid):
+    ennemiesPOsitions = []
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            if grid[row][col] == ANAMY:
+                ennemiesPOsitions.append([row,col])
+
+    return ennemiesPOsitions
+
+def canMoveAnamy(grid,row,col):
+    global choiceToMoveAnamy
+    choiceToMoveAnamy = []
+    if grid[row][col-1] != WALL and grid[row][col-1] != ANAMY:
+        choiceToMoveAnamy.append('left')
+    if grid[row][col+1] != WALL and grid[row][col+1] != ANAMY:
+        choiceToMoveAnamy.append('right')
+    if grid[row-1][col] != WALL and grid[row-1][col] != ANAMY:
+        choiceToMoveAnamy.append('up')
+    if grid[row+1][col] != WALL and grid[row+1][col] != ANAMY:
+        choiceToMoveAnamy.append('down')
+    return choiceToMoveAnamy
+
+def moveAllEnnemies():
+    global choiceToMoveAnamy,gameNotOver
+    for ennemy in getAllEnnemiesPositions(grid) :
+        enemyRow = ennemy[0]
+        ennemyColumn = ennemy[1]
+        placeToMove = canMoveAnamy(grid, enemyRow, ennemyColumn)
+        if len(placeToMove)> 0:
+            randomAnamy = random.choice(placeToMove)
+            if  gameNotOver :
+                if randomAnamy == 'right':
+                    if grid[enemyRow][ennemyColumn+1] != WALL:
+                        if grid[enemyRow][ennemyColumn+1] == PLAYER:
+                            gameNotOver = False
+                        elif grid[enemyRow][ennemyColumn+1] == GOLD:
+                            grid[enemyRow][ennemyColumn+1] = ANAMY
+                            grid[enemyRow][ennemyColumn] = GOLD
+                        else:
+                            grid[enemyRow][ennemyColumn+1] = ANAMY
+                            grid[enemyRow][ennemyColumn] = COIN
+                elif randomAnamy == 'left':
+                    if grid[enemyRow][ennemyColumn-1] != WALL:
+                        if grid[enemyRow][ennemyColumn-1] == PLAYER:
+                            gameNotOver = False
+                        elif grid[enemyRow][ennemyColumn-1] == GOLD:
+                            grid[enemyRow][ennemyColumn-1] = ANAMY
+                            grid[enemyRow][ennemyColumn] = GOLD
+                        else:
+                            grid[enemyRow][ennemyColumn-1] = ANAMY
+                            grid[enemyRow][ennemyColumn] = COIN
+                elif randomAnamy == 'down':
+                    if grid[enemyRow+1][ennemyColumn] != WALL:
+                        if grid[enemyRow+1][ennemyColumn] == PLAYER:
+                            gameNotOver = False
+                        elif grid[enemyRow+1][ennemyColumn] == GOLD:
+                            grid[enemyRow+1][ennemyColumn] = ANAMY
+                            grid[enemyRow][ennemyColumn] = GOLD
+                        else:
+                            grid[enemyRow+1][ennemyColumn] = ANAMY
+                            grid[enemyRow][ennemyColumn] = COIN
+                elif randomAnamy == 'up':
+                    if grid[enemyRow-1][ennemyColumn] != WALL:
+                        if grid[enemyRow-1][ennemyColumn] == PLAYER:
+                            gameNotOver = False
+                        elif grid[enemyRow-1][ennemyColumn] == GOLD:
+                            grid[enemyRow-1][ennemyColumn] = ANAMY
+                            grid[enemyRow][ennemyColumn] = GOLD
+                        else:
+                            grid[enemyRow-1][ennemyColumn] = ANAMY
+                            grid[enemyRow][ennemyColumn] = COIN
+
+
+
+
+        # decide here to moeve  ennmy
+
+    canvas.delete('all')
+    gridToDraw()
+    canvas.after(500,lambda: moveAllEnnemies())
+    showScore()
 
 
 
@@ -172,12 +250,17 @@ def moveDown(event):
 def moveUp(event):
     move('up')
 
+#CALL FUNCTION FRO MOVE THE ANAMY
+
+
+
 # IMAGES FOR PLAYER , COIN AND MONSTER
 
 player = tk.PhotoImage(file="picture/player.png")
 zombies = tk.PhotoImage(file="picture/monster.png")
 coins = tk.PhotoImage(file="picture/coin.png")
 gold = tk.PhotoImage(file="picture/gold_1.png")
+win = tk.PhotoImage(file="picture/congratulation.gif") 
 
 # SOUN FOR GAME 
 
@@ -190,7 +273,12 @@ root.bind("<Left>", moveLeft)
 root.bind("<Down>", moveDown)
 root.bind("<Up>", moveUp)
 
+
 gridToDraw()
+moveAllEnnemies()
+showScore()
+
+# staRT OT MOVE EENEMIES
 
 canvas.pack(expand=True, fill="both")
 root.mainloop()
